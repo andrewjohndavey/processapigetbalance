@@ -1,0 +1,70 @@
+#%RAML 0.8
+title: ProcessAPIGetBalance
+version: 1.0
+baseUri: http://localhost:8080
+
+/getBalances:
+  /getAll: 
+    displayName: Get all balances on all accounts for a customer
+    get: 
+        description: This will send a get balances from all accounts
+        queryParameters: 
+            customerID: 
+                description: Customer ID
+                type: string
+                required: true
+                repeat: false
+                example: 111111
+            tSys:
+                description: Use TSys
+                type: string
+                required: false
+                repeat: false
+                example: false
+        responses: 
+            "200": 
+                body: 
+                    application/json: 
+                        example: |
+                            [
+                              {
+                                "Credit Card Account": "11111111",
+                                "Balance": 123456.78
+                              },
+                              {
+                                "Savings Account": "22222222",
+                                "Balance": 123.45
+                              },
+                              {
+                                "Loan Account": "33333333",
+                                "Balance": 2345.67
+                              }
+                            ]
+  /getCreditCard: 
+    displayName: Get creditcard only
+    get: 
+        description: This will get the credit card balance
+        queryParameters: 
+            customerID: 
+                description: Customer ID
+                type: string
+                required: true
+                repeat: false
+                example: 111111
+            tSys:
+                description: Use TSys
+                type: string
+                required: false
+                repeat: false
+                example: true
+        responses: 
+            "200": 
+                body: 
+                    application/json: 
+                        example: |
+                            [
+                              {
+                                "Credit Card Account": "11111111",
+                                "Balance": 123456.78
+                              }
+                            ]

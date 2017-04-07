@@ -1,0 +1,26 @@
+#%RAML 0.8
+title: SystemAPIFISGlobalCreditCardBalance
+version: "2.0"
+baseUri: "http://fisglobalcreditcardbalance.eu.cloudhub.io/api"
+/getCreditCardBalance: 
+    displayName: Get the credit card balance for a customer
+    get: 
+        description: This will retrive the credit card balance from FIS Global
+        queryParameters: 
+            customerID: 
+                description: Customer ID
+                type: string
+                required: true
+                repeat: false
+                example: "111111"
+        responses: 
+            "200": 
+                body: 
+                    application/json: 
+                        example: |
+                            [
+                              {
+                                "Credit Card": "3513259313951432",
+                                "Balance": 5132.78
+                              }
+                            ]

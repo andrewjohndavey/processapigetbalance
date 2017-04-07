@@ -1,0 +1,26 @@
+#%RAML 0.8
+title: TSYSCreditCardBalance
+version: "0.1"
+baseUri: "http://tsyscreditcardbalance.eu.cloudhub.io/api"
+/getCreditCardBalance: 
+    displayName: Get the credit card balance for a customer
+    get: 
+        description: This will retrive the credit card balance from TSYS
+        queryParameters: 
+            customerID: 
+                description: Customer ID
+                type: string
+                required: true
+                repeat: false
+                example: AJD101
+        responses: 
+            "200": 
+                body: 
+                    application/json: 
+                        example: |
+                            [
+                              {
+                                "Credit Card": "11111111",
+                                "Balance": 5132.78
+                              }
+                            ]

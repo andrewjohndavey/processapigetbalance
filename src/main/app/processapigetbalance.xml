@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:api-platform-gw="http://www.mulesoft.org/schema/mule/api-platform-gw" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/api-platform-gw http://www.mulesoft.org/schema/mule/api-platform-gw/current/mule-api-platform-gw.xsd">
+    <http:listener-config name="processapigetbalance-httpListenerConfig" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration" />
+    <apikit:config name="processapigetbalance-config" raml="processapigetbalance.raml" consoleEnabled="false" doc:name="Router" />
+    <http:request-config name="HTTP_Request_Configuration" host="tsyscreditcardbalance.eu.cloudhub.io" port="80" basePath="/api" doc:name="HTTP Request Configuration">
+        <http:raml-api-configuration location="tsyscreditcardbalance.raml" />
+    </http:request-config>
+    <http:request-config name="HTTP_FIS_Balance" host="fisglobalcreditcardbalance.eu.cloudhub.io" port="80" basePath="/api" doc:name="HTTP Request Configuration">
+        <http:raml-api-configuration location="fisglobalcreditcardbalance.raml" />
+    </http:request-config>
+    <http:request-config name="HTTP_Loan_Balance" protocol="HTTPS" host="mocksvc.mulesoft.com" port="443" basePath="/mocks/161a9084-c5d1-429b-9db6-963f1bbcee2c" doc:name="HTTP Request Configuration">
+        <http:raml-api-configuration location="tsysloanbalance.raml" />
+    </http:request-config>
+    <api-platform-gw:api apiName="ProcessAPIGetBalance" version="2.0" flowRef="processapigetbalance-main" create="true" apikitRef="processapigetbalance-config" doc:name="API Autodiscovery"/>
+    <flow name="processapigetbalance-main">
+        <http:listener config-ref="processapigetbalance-httpListenerConfig" path="/api/*" doc:name="HTTP" />
+        <apikit:router config-ref="processapigetbalance-config" doc:name="APIkit Router" />
+        <exception-strategy ref="processapigetbalance-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy" />
+    </flow>
+    <flow name="processapigetbalance-console">
+        <http:listener config-ref="processapigetbalance-httpListenerConfig" path="/console/*" doc:name="HTTP" />
+        <apikit:console config-ref="processapigetbalance-config" doc:name="APIkit Console" />
+    </flow>
+    <flow name="get:/getBalances/getAll:processapigetbalance-config">
+        <scatter-gather doc:name="">
+            <processor-chain>
+                <dw:transform-message doc:name="Set Loan Details">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+{
+	"Loan Account": "33333333",
+	"Balance": 2345.67
+}
+]]></dw:set-payload>
+                </dw:transform-message>
+                <logger level="INFO" doc:name="Logger" />
+            </processor-chain>
+            <flow-ref name="get:/getBalances/getCreditCard:processapigetbalance-config" doc:name="get:/getBalances/getCreditCard:processapigetbalance-config"/>
+        </scatter-gather>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload]]></dw:set-payload>
+        </dw:transform-message>
+        <logger level="INFO" doc:name="Logger" />
+    </flow>
+    <flow name="get:/getBalances/getCreditCard:processapigetbalance-config">
+        <choice doc:name="Determine Credit Card System">
+            <when expression="#[message.inboundProperties.'http.query.params'.tSys == true]">
+                <flow-ref name="TSYS-Balance" doc:name="TSYS-Balance"/>
+            </when>
+            <otherwise>
+                <flow-ref name="FISGetBalance" doc:name="FISGetBalance"/>
+            </otherwise>
+        </choice>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload doc:sample="sample_data/list_json.json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/json
+---
+payload[0]]]></dw:set-payload>
+        </dw:transform-message>
+    </flow>
+    <sub-flow name="FISGetBalance">
+        <http:request config-ref="HTTP_FIS_Balance" path="/getCreditCardBalance" method="GET" doc:name="FIS Get Balance">
+            <http:request-builder>
+                <http:query-param paramName="customerID" value="#[message.inboundProperties.'http.query.params'.customerID]" />
+            </http:request-builder>
+        </http:request>
+    </sub-flow>
+    <sub-flow name="TSYS-Balance">
+        <http:request config-ref="HTTP_Request_Configuration" path="/getCreditCardBalance" method="GET" doc:name="TSYS Get Balance">
+            <http:request-builder>
+                <http:query-param paramName="customerID" value="#[message.inboundProperties.'http.query.params'.customerID]" />
+            </http:request-builder>
+        </http:request>
+    </sub-flow>
+    <apikit:mapping-exception-strategy name="processapigetbalance-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property" />
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload" />
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+</mule>

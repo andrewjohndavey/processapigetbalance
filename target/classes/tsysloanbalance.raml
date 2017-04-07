@@ -1,0 +1,27 @@
+#%RAML 0.8
+title: TSYSLoanBalance
+version: 0.1
+#baseUri: http://localhost:8080
+baseUri: https://mocksvc.mulesoft.com/mocks/161a9084-c5d1-429b-9db6-963f1bbcee2c
+/getLoanBalance: 
+    displayName: Get the loan balance for a customer
+    get: 
+        description: This will retrive the credit card balance from TSYS
+        queryParameters: 
+            loanID: 
+                description: Loan 
+                type: string
+                required: true
+                repeat: false
+                example: AJD101
+        responses: 
+            "200": 
+                body: 
+                    application/json: 
+                        example: |
+                            [
+                              {
+                                "Loan ID": "12121212",
+                                "Balance": 5132.78
+                              }
+                            ]
